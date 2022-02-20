@@ -21,19 +21,19 @@ Generates and saves binary outputs using different upper limb use measures.
 ## Data
 There are four data files in this repository:
 
-[**right.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/control/right.csv)
+[**right.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/control/data/right.csv)
 
 Contains data from the right arm of the control subjects.
 
-[**left.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/control/left.csv)
+[**left.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/control/data/left.csv)
 
 Contains data from the left arm of the control subjects.
 
-[**unaffected.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/control/unaffected.csv)
+[**unaffected.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/patient/data/unaffected.csv)
 
 Contains data from the unaffected arm of the patients.
 
-[**affected.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/control/affected.csv)
+[**affected.csv**](https://github.com/biorehab/upper-limb-use-assessment/blob/master/patient/data/affected.csv)
 
 Contains data from the affected arm of the patients.
 
