@@ -49,3 +49,7 @@ The experiment videos were annotated using the FAABOS scale by 2 therapists twic
 Yaw and pitch angles were calculated from the accelerometer and gyroscope data using the Madgwick algorithm.
 
 The task column contains strings corresponding to what task was performed at that instant (eg. ‘ButtonShirt’ or ‘Walk25’). The use_type column has ‘Arm’, ‘Hand’ or ‘NF’ corresponding to tasks that make use of primarily arms or primarily hands, or non-functional tasks respectively.
+
+## Publications
+
+[**Quantification of the relative arm use in patients with hemiparesis using inertial measurement units**](https://journals.sagepub.com/doi/full/10.1177/20556683211019694)
