@@ -38,18 +38,29 @@ Contains data from the unaffected arm of the patients.
 Contains data from the affected arm of the patients.
 
 The columns in each of the four files are, 
-time, subject, ax, ay, az, gx, gy, gz, r1, r2, g1, g2, yaw, pitch, task, use_type
+time, ax, ay, az, gx, gy, gz, pitch, yaw, mx, my, mz, subject, old_time, r1, r2, g1, g2, task, use_type, gnd
 
-There were 10 controls and 5 patients in the study.
+# Subjects
 
-Columns ax, ay, and az correspond to data from the 3 axes of the accelerometer and gx, gy, and gz correspond to data from the 3 axes of the gyroscope data. The sensor data was recorded at 50 Hz.
+There were 10 controls and 5 patients in the study. The subject column contains numbers unique to each subject.
 
-The experiment videos were annotated using the FAABOS scale by 2 therapists twice with a week between each annotation. Columns r1 and r2 correspond to  first and second annotations made by one therapist, and g1 and g2 correspond to those by the other therapist. Video annotations were saved at 30 Hz and are up-sampled here to match the sensor data frequency.
+# Time 
+
+The column 'old_time' contains time on the watch while recording. Delay (~1s) between the video and the watches was corrected by observing the data and video simultaneously. Corrected time is included in the time column.
+
+# Sensor data
+
+Columns ax, ay, and az correspond to data from the 3 axes of the accelerometer, gx, gy, and gz correspond to data from the gyroscope and mx, my, and mz correspond to data from the magnetometer. The sensor data were recorded at 50 Hz.
 
 Yaw and pitch angles were calculated from the accelerometer and gyroscope data using the Madgwick algorithm.
+
+# Video annotations
+
+The experiment videos were annotated using the FAABOS scale by 2 therapists twice with a week between each annotation. Columns r1 and r2 correspond to  first and second annotations made by one therapist, and g1 and g2 correspond to those by the other therapist. The gnd column corresponds to final ground truth used for analysis. It was obtained by taking the majority of r1, r2, g1, and g2, a label was chosen randomly in the event of a tie. Video annotations were saved at 30 Hz and are up-sampled here to match the sensor data frequency.
 
 The task column contains strings corresponding to what task was performed at that instant (eg. ‘ButtonShirt’ or ‘Walk25’). The use_type column has ‘Arm’, ‘Hand’ or ‘NF’ corresponding to tasks that make use of primarily arms or primarily hands, or non-functional tasks respectively.
 
 ## Publications
 
-[**Quantification of the relative arm use in patients with hemiparesis using inertial measurement units**](https://journals.sagepub.com/doi/full/10.1177/20556683211019694)
+David, A., ReethaJanetSureka, S., Gayathri, S., Annamalai, S. J., Samuelkamleshkumar, S., Kuruvilla, A., Magimairaj, H. P., Varadhan, S., & Balasubramanian, S. (2021). [**Quantification of the relative arm use in patients with hemiparesis using inertial measurement units**](https://journals.sagepub.com/doi/full/10.1177/20556683211019694). Journal of Rehabilitation and Assistive Technologies Engineering.
+

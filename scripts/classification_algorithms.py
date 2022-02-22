@@ -17,11 +17,7 @@ import sys
 
 
 def get_continuous_segments(df):
-    """
-    finds continuous sections in a dataframe
-    :param df: dataframe
-    :return: list of dataframes separated by atleast 60s
-    """
+    # returns a list of continuous sections (as dataframes) from the original dataframe
 
     time_diff = np.array([pd.Timedelta(diff).total_seconds() for diff in np.diff(df.index.values)])
     inx = np.sort(np.append(np.where(time_diff > 60)[0], -1))
@@ -31,13 +27,6 @@ def get_continuous_segments(df):
 
 
 def confmatrix(pred, target):
-    """
-    computes performance parameters of a classifier
-    :param pred: predicted binary output
-    :param target: ground truth
-    :return: dataframe with true positive, false positive, false negative, true negative, accuracy, gwets ac1 score,
-             sensitivity, specificity, balanced accuracy, f1 score, precision
-    """
     n = len(pred)
     notpred = np.logical_not(pred)
     nottarget = np.logical_not(target)
@@ -72,26 +61,12 @@ def confmatrix(pred, target):
 
 
 def bandpass(x, fs=50, order=4):
-    """
-    butterworth filter
-    :param x: raw signal
-    :param fs: sampling frequency
-    :param order: filter order
-    :return: filtered signal
-    """
     sos = signal.butter(order, [0.25, 2.5], 'bandpass', fs=fs, output='sos', analog=False)
     filtered = signal.sosfilt(sos, x)
     return filtered
 
 
 def resample(df, current_fs, new_fs):
-    """
-    down-samples dataframe
-    :param df: input dataframe
-    :param current_fs: current sampling frequency
-    :param new_fs: desired sampling frequency
-    :return: down-sampled dataframe
-    """
     dfs = get_continuous_segments(df)
     dfs = [df.resample(str(round(1 / new_fs, 2)) + 'S', label='right', closed='right').mean() for df in dfs]
     df = pd.concat(dfs)
@@ -100,11 +75,6 @@ def resample(df, current_fs, new_fs):
 
 
 def threshold_filter(df):
-    """
-    employs threshold filter proposed by uswatte et al; axes (x,z) are chosen accordingly
-    :param df: dataframe with raw imu data
-    :return: dataframe with classifier output
-    """
     dfs = get_continuous_segments(df)
     dfs = [df.resample('0.1S').last() for df in dfs]
     df = pd.concat(dfs)
@@ -130,11 +100,6 @@ def threshold_filter(df):
 
 
 def compute_activity_counts(df):
-    """
-    returns dataframe with counts generated using method proposed by de lucena et al
-    :param df: dataframe with raw imu data
-    :return: dataframe with classifier output
-    """
     op_df = pd.DataFrame(index=df.index)
 
     g = np.array([0, 0, 1])
@@ -166,11 +131,6 @@ def compute_activity_counts(df):
 
 
 def compute_vector_magnitude(df):
-    """
-    returns dataframe with counts generated using method proposed by bailey et al
-    :param df: dataframe with raw imu data
-    :return: dataframe with classifier output
-    """
     df = resample(df, 50, 30)
     op_df = pd.DataFrame(index=df.index)
 
@@ -212,24 +172,11 @@ def compute_vector_magnitude(df):
 
 
 def calculate_gm(pitch, yaw, fun_range=30, min_mvt=30):
-    """
-    checks if conditions for gm are satisfied
-    :param pitch: pitch of the arm
-    :param yaw: yaw of the arm
-    :param fun_range: functional range defined in gm
-    :param min_mvt: minimum movement defined in gm
-    :return: 1 or 0
-    """
     return 1.0 if (np.all(np.abs(pitch) < fun_range) and (
             max(yaw) - min(yaw) + max(pitch) - min(pitch)) > min_mvt) else 0.0
 
 
 def get_gm_scores(data):
-    """
-    returns gm binary output for a dataframe
-    :param data: dataframe with raw imu data
-    :return: dataframe with classifier output
-    """
     op_dfs = []
     for df in get_continuous_segments(data[['yaw', 'pitch']]):
         df['time'] = df.index
@@ -245,11 +192,6 @@ def get_gm_scores(data):
 
 
 def get_gm_modified(data):
-    """
-    computes modified gm output
-    :param data: dataframe with raw imu data
-    :return: dataframe with classifier output
-    """
     pitch = resample(data[['pitch']], 50, 1)
     counts = compute_vector_magnitude(data)
     gmac = pd.merge(pitch, counts, on='time')
@@ -258,11 +200,6 @@ def get_gm_modified(data):
 
 
 def entropy(data):
-    """
-    computes entropy of a signal
-    :param data: signal (array-like)
-    :return: entropy
-    """
     data = np.array(data).reshape(-1, 1)
     # estimate pdf using KDE with gaussian kernel
     kde = KernelDensity(kernel='gaussian', bandwidth=0.2).fit(data)
@@ -271,12 +208,6 @@ def entropy(data):
 
 
 def compute_features(data, freq):
-    """
-    computes features defined by lum et al
-    :param data: dataframe with raw imu data
-    :param freq: sampling frequency of features (for non-overlapping windows)
-    :return: dataframe with features
-    """
     acc_vectors = np.array([data['ax'], data['ay'], data['az']], np.int32)
     data['anorm'] = [np.linalg.norm(acc_vectors[:, i]) for i in range(len(data))]
 
@@ -314,14 +245,6 @@ def compute_features(data, freq):
 
 
 def split_intrasubject(subdata, features, target, n_splits):
-    """
-    creates unique and equal-sized folds with indices for intra-subject splits
-    :param subdata: dataframe with data from a single subject
-    :param features: features used
-    :param target: ground truth
-    :param n_splits: number of splits
-    :return: folds as a list of indices
-    """
     folds = []
     remain_inx = np.array(range(len(subdata))).astype(int)
     for fold in range(2, n_splits)[::-1]:
@@ -336,11 +259,6 @@ def split_intrasubject(subdata, features, target, n_splits):
 
 
 def split_intersubject(data):
-    """
-    creates inter-subject folds
-    :param data: dataframe with data from multiple subjects
-    :return: folds as a list of indices (corresponding to different subjects)
-    """
     df = data.copy()
     df['inx'] = range(len(df))
     folds = []
@@ -353,15 +271,6 @@ def split_intersubject(data):
 
 
 def train_and_test_intersubject(df, features, target, classifier, param_grid=None):
-    """
-    trains and tests a classifier - intersubject
-    :param df: dataframe with raw imu data
-    :param features: features used
-    :param target: ground truth
-    :param classifier: classifier used
-    :param param_grid: None
-    :return: dataframe with classifier output
-    """
     new_subs = []
 
     for sub, subdata in df.groupby('subject'):
@@ -378,15 +287,6 @@ def train_and_test_intersubject(df, features, target, classifier, param_grid=Non
 
 
 def train_and_test_intrasubject(df, features, target, classifier, param_grid=None):
-    """
-    trains and tests a classifier - intrasubject
-    :param df: dataframe with raw imu data
-    :param features: features used
-    :param target: ground truth
-    :param classifier: classifier used
-    :param param_grid: None
-    :return: dataframe with classifier output
-    """
     col = features + ['time', 'subject']
     new_subs = []
 
@@ -402,8 +302,8 @@ def train_and_test_intrasubject(df, features, target, classifier, param_grid=Non
 
         traindata[col] = x_train
         testdata[col] = x_test
-        traindata[target] = y_train.reshape((-1, 1))
-        testdata[target] = y_test.reshape(-1, 1)
+        traindata[target] = y_train.reshape((-1,1))
+        testdata[target] = y_test.reshape(-1,1)
         classifier.fit(x_train[:, :-2], y_train)
 
         testdata['pred'] = classifier.predict(x_test[:, :-2])
@@ -413,15 +313,6 @@ def train_and_test_intrasubject(df, features, target, classifier, param_grid=Non
 
 
 def train_validate_and_test_intersubject(df, features, target, classifier, param_grid):
-    """
-    trains classifiers with different hyper-parameters and tests with the best performing classifier - inter-subject
-    :param df: dataframe with raw imu data
-    :param features: features used
-    :param target: ground truth
-    :param classifier: classifier used
-    :param param_grid: dict with different hyper-parameters
-    :return: dataframe with classifier output
-    """
     new_subs = []
     sublist = df.groupby('subject')
 
@@ -451,15 +342,6 @@ def train_validate_and_test_intersubject(df, features, target, classifier, param
 
 
 def train_validate_and_test_intrasubject(df, features, target, classifier, param_grid):
-    """
-    trains classifiers with different hyper-parameters and tests with the best performing classifier - intra-subject
-    :param df: dataframe with raw imu data
-    :param features: features used
-    :param target: ground truth
-    :param classifier: classifier used
-    :param param_grid: dict with different hyper-parameters
-    :return: dataframe with classifier output
-    """
     col = features + ['time', 'subject', 'task']
     new_subs = []
     sublist = df.groupby('subject')
@@ -475,8 +357,8 @@ def train_validate_and_test_intrasubject(df, features, target, classifier, param
                                                             stratify=subdata[target].values.reshape(-1))
         traindata[col] = x_train
         testdata[col] = x_test
-        traindata[target] = y_train.reshape((-1, 1))
-        testdata[target] = y_test.reshape((-1, 1))
+        traindata[target] = y_train.reshape((-1,1))
+        testdata[target] = y_test.reshape((-1,1))
 
         # tune hyperparameters by cross validation
         split = split_intrasubject(traindata, features, target, 4)
@@ -496,8 +378,6 @@ def train_validate_and_test_intrasubject(df, features, target, classifier, param
 def read_data(subject_type):
     """
     Reads raw data from 'subject_type' folder
-    :param subject_type: 'control' or 'patient'
-    :return: two dataframes with data from both arms - left, right / affected, unaffected
     """
     if subject_type == 'patient':
         left = pd.read_csv(subject_type + '/data/affected.csv', parse_dates=['time'], index_col='time')
@@ -513,8 +393,6 @@ def read_data(subject_type):
 def read_features(subject_type, freq=4):
     """
     Reads features from 'subject_type' folder
-    :param subject_type: 'control' or 'patient'
-    :return: two dataframes with data from both arms - left, right / affected, unaffected
     """
     if not os.path.exists(subject_type):
         raise Exception(f'Invalid parameter: {subject_type}')
@@ -530,12 +408,7 @@ def read_features(subject_type, freq=4):
 
 
 def generate_and_save_features(subject_type, freq=4):
-    """
-    generates features for machine learning methods
-    :param subject_type: 'control' or 'patient'
-    :param freq: sampling frequency of the features
-    :return: two dataframes with features from both arms - left, right / affected, unaffected
-    """
+    # features for machine learning
     sys.stdout.write('Generating features (4hz) for machine learning...')
     left, right = read_data(subject_type)
     ldf = compute_features(left, freq)
@@ -645,14 +518,6 @@ def generate_hybrid_gmac_output(subject_type):
 
 
 def call_machine_learning_function(data, function, features='all', **kwargs):
-    """
-    calls function with protocol for training and testing
-    :param data: dataframe with raw imu data
-    :param function: function with protocol for training and testing
-    :param features: features used
-    :param kwargs: classifier, param_grid etc.
-    :return: output from function
-    """
     if features == 'all':
         features = ['ax_mean', 'ax_var', 'ay_mean', 'ay_var', 'az_mean', 'az_var',
                     'a2_mean', 'a2_var', 'a2_min', 'a2_max', 'entropy']
@@ -702,8 +567,7 @@ def generate_intersubject_output(subject_type, classifier):
 
 def generate_intrasubject_output(subject_type, classifier):
     """
-    Generates and saves intra-subject model output using 'classifier'; intra-subject training and testing is executed
-    10 times
+    Generates and saves intra-subject model output using 'classifier'
     :param subject_type: 'control', 'patient' - reads data and features from folder
     :param classifier: 'rf', 'svm', 'mlp'
     """
@@ -745,15 +609,6 @@ def generate_intrasubject_output(subject_type, classifier):
 
 
 def plot_roc(methods_dict, data, hand, title, legend=True):
-    """
-    generates an roc plot - sensitivity vs 1-specificity
-    :param methods_dict: dict with names and dataframes of classifier outputs
-    :param data: dataframe with ground truth
-    :param hand: 'right' or 'left' to get output from apt column in dataframes in methods_dict
-    :param title: title of plot
-    :param legend: bool, add legend or not
-    :return: dataframe with different performance parameters
-    """
     plt.xlim(0, 1)
     plt.ylim(0, 1)
     plt.title(title, fontsize=15)
@@ -792,23 +647,12 @@ def plot_roc(methods_dict, data, hand, title, legend=True):
 
 
 def get_outputs(subject_type, names=[]):
-    """
-    generates a dict with names and dataframes with classifier outputs
-    :param subject_type: 'control' or 'patient'
-    :param names: list of strings with classifier names
-    :return: dict with classifier outputs
-    """
-    dfs = [pd.read_csv(subject_type + '/classifier outputs/' + name, parse_dates=['time'], index_col='time') for name in
-           names]
+    dfs = [pd.read_csv(subject_type + '/classifier outputs/' + name, parse_dates=['time'], index_col='time') for name in names]
     names = [name[:-4] for name in names]
     return dict(zip(names, dfs))
 
 
 def plot_comparison_roc():
-    """
-    generates plot with 4 subplots of rocs for different groups - left, right, affected, unaffected with all classifier
-    outputs, saves csv file with all performance parameters
-    """
     plt.figure(figsize=(13, 3))
     left, right = read_data('control')
     affected, unaffected = read_data('patient')
@@ -864,12 +708,10 @@ def plot_comparison_roc():
             plt.grid()
     plt.subplots_adjust(wspace=0.3)
     plt.legend(bbox_to_anchor=(-4, -0.2), loc='upper left', fontsize=12, ncol=5)
+    
 
 
 def plot_youden_boxplot():
-    """
-    generates a boxplot of youden indices for all use measures
-    """
     left, right = read_data('control')
     affected, unaffected = read_data('patient')
     datasets = [[right, left], [unaffected, affected]]
@@ -903,7 +745,7 @@ def plot_youden_boxplot():
     df = pd.concat(ls)
     df['youden'] = df['sensitivity'] + df['specificity'] - 1
     df.to_csv('results/comparison.csv')
-    plt.figure(figsize=(14, 2.8))
+    plt.figure(figsize=(10, 2.8))
     order = df.groupby('method').mean().sort_values('youden').index
     colors = {'Activity Counts': 'tab:blue', 'Vector Magnitude': 'tab:orange', 'GM Score': 'tab:green',
               'GMAC': 'tab:pink', 'RF intra': 'tab:red', 'RF inter': 'firebrick', 'SVM intra': 'tab:purple',

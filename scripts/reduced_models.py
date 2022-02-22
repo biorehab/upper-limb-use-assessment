@@ -12,11 +12,6 @@ from scipy.stats import spearmanr
 
 
 def get_feature_label(features):
-    """
-    generates a label for filename for classifier with different combinations of features
-    :param features: features used in the classifier
-    :return: label for the features
-    """
     name = 'ax' if len(features) == 1 else 'var' if np.any(
         [True if i.find('var') != -1 else False for i in features]) else 'mean'
     return name
@@ -96,12 +91,9 @@ def generate_intrasubject_output(subject_type, reduced_type):
 
 
 def plot_reduced_model_results():
-    """
-    generates a boxplot for youden indices of reduced models for different groups - left, right, affected, unaffected
-    """
     files_sets = [['rf_intra.csv', 'rf_intra_ax.csv', 'rf_intra_mean.csv', 'rf_intra_var.csv'],
                   ['rf_inter.csv', 'rf_inter_ax.csv', 'rf_inter_mean.csv', 'rf_inter_var.csv']]
-    labels = ['full', 'mean of ax', 'mean of ax, ay, az', 'mean and variance of ax, ay, az']
+    labels = ['full', 'mean of ax', 'all mean', 'all mean and variance']
     ls = []
     left, right = ca.read_data('control')
     affected, unaffected = ca.read_data('patient')
@@ -152,202 +144,160 @@ def plot_reduced_model_results():
     result = pd.concat([cont_intra, pat_intra, cont_inter, pat_inter])
     result.to_csv('results/reduced_models.csv')
     fig, ax = plt.subplots(figsize=(10, 3))
-    sns.boxplot(data=result, x='type', y='youden', hue='method', notch=True)
+    sns.boxplot(data=result, x='type', y='youden', hue='method', notch=True, ax=ax)
+    ax.set_xlim(0-0.5, 3+0.5)
     plt.xlabel(None)
     plt.xticks(fontsize=12)
     plt.ylabel('Youden Index', fontsize=12)
     plt.yticks(fontsize=8)
     plt.tight_layout()
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles=handles[:], labels=labels[:], fontsize=12, bbox_to_anchor=(1, -0.1), ncol=2)
-
-
+    ax.legend(handles=handles[:], labels=labels[:], fontsize=12, bbox_to_anchor=(1.01, 1), ncol=1)
+    
 def get_features(data, freq):
-    """
-    computes features proposed by lum et al and "interpretable" features like pitch, yaw etc.
-    :param data: dataframe with raw imu data
-    :param freq: sampling frequency of features
-    :return: dataframe with features
-    """
-    acc_vectors = np.array([data['ax'], data['ay'], data['az']], np.int32)
-    data['anorm'] = [np.linalg.norm(acc_vectors[:, i]) for i in range(len(data))]
-    axz = np.array([data['ax'], data['az']], np.int32)
-    axz = np.array([np.linalg.norm(axz[:, i]) for i in range(len(data))])
-    data['roll'] = np.arctan2(-data['ay'].values, data['az'].values) * (180 / np.pi)
+  acc_vectors = np.array([data['ax'], data['ay'], data['az']], np.int32)
+  data['anorm'] = [np.linalg.norm(acc_vectors[:, i]) for i in range(len(data))]
+  axz = np.array([data['ax'], data['az']], np.int32)
+  axz = np.array([np.linalg.norm(axz[:, i]) for i in range(len(data))])
+  data['roll'] = np.arctan2(-data['ay'].values, data['az'].values)*(180/np.pi)
 
-    data.index = pd.to_datetime(data.index)
-    df = pd.DataFrame()
-    data_list = ca.get_continuous_segments(data)
-    data_list = [data.resample(str(round(1 / freq, 2)) + 'S', label='right', closed='right') for data in data_list]
-    blocks = [block for data in data_list for i, block in data if len(block) > 0]
+  data.index = pd.to_datetime(data.index)
+  df = pd.DataFrame()
+  data_list = ca.get_continuous_segments(data)
+  data_list = [data.resample(str(round(1/freq, 2))+'S', label='right', closed='right') for data in data_list]
+  blocks = [block for data in data_list for i,block in data if len(block)>0]
 
-    df['ax_mean'] = [block['ax'].mean() for block in blocks]
-    df['ax_var'] = [block['ax'].var() for block in blocks]
-    df['ay_mean'] = [block['ay'].mean() for block in blocks]
-    df['ay_var'] = [block['ay'].var() for block in blocks]
-    df['az_mean'] = [block['az'].mean() for block in blocks]
-    df['az_var'] = [block['az'].var() for block in blocks]
+  df['ax_mean'] = [block['ax'].mean() for block in blocks]
+  df['ax_var'] = [block['ax'].var() for block in blocks]
+  df['ay_mean'] = [block['ay'].mean() for block in blocks]
+  df['ay_var'] = [block['ay'].var() for block in blocks]
+  df['az_mean'] = [block['az'].mean() for block in blocks]
+  df['az_var'] = [block['az'].var() for block in blocks]
+  
+  df['a2_mean'] = [block['anorm'].mean() for block in blocks]
+  df['a2_var'] = [block['anorm'].var() for block in blocks]
+  df['a2_min'] = [block['anorm'].min() for block in blocks]
+  df['a2_max'] = [block['anorm'].max() for block in blocks]
+  df['entropy'] = [ca.entropy(block['anorm'].values) for block in blocks]
+  df['pitch'] = [block['pitch'][-1] for block in blocks]
+  df['roll'] = [block['roll'][-1] for block in blocks]
+  df['yaw'] = [block['yaw'][-1] for block in blocks]
+  df['delta_yaw'] = [block['yaw'].max()-block['yaw'].min() for block in blocks]
+  
+  df['subject'] = [block['subject'][0] for block in blocks]
+  df['t_inst'] = [block['gnd'][-1] for block in blocks]
+  df['t_maj'] = [np.round(block['gnd'].mean()) for block in blocks]
+  df['t_mid'] = [block['gnd'][int(len(block)/2)] for block in blocks]
+  df['time'] = [block.index[-1] for block in blocks]
+  
+  df = df.set_index('time')
+  df.index = pd.to_datetime(df.index)
+  
+  cdf = ca.compute_vector_magnitude(data)
+  df = pd.merge_asof(cdf.fillna(0), df, on='time')
 
-    df['a2_mean'] = [block['anorm'].mean() for block in blocks]
-    df['a2_var'] = [block['anorm'].var() for block in blocks]
-    df['a2_min'] = [block['anorm'].min() for block in blocks]
-    df['a2_max'] = [block['anorm'].max() for block in blocks]
-    df['entropy'] = [ca.entropy(block['anorm'].values) for block in blocks]
-    df['pitch'] = [block['pitch'][-1] for block in blocks]
-    df['roll'] = [block['roll'][-1] for block in blocks]
-    df['yaw'] = [block['yaw'][-1] for block in blocks]
-    df['delta_yaw'] = [block['yaw'].max() - block['yaw'].min() for block in blocks]
+  df = df.dropna(subset=['ax_var', 'ay_var', 'az_var'])
 
-    df['subject'] = [block['subject'][0] for block in blocks]
-    df['t_inst'] = [block['gnd'][-1] for block in blocks]
-    df['t_maj'] = [np.round(block['gnd'].mean()) for block in blocks]
-    df['t_mid'] = [block['gnd'][int(len(block) / 2)] for block in blocks]
-    df['time'] = [block.index[-1] for block in blocks]
-
-    df = df.set_index('time')
-    df.index = pd.to_datetime(df.index)
-
-    cdf = ca.compute_vector_magnitude(data)
-    df = pd.merge_asof(cdf.fillna(0), df, on='time')
-
-    df = df.dropna(subset=['ax_var', 'ay_var', 'az_var'])
-
-    return df.set_index('time')
-
-
+  return df.set_index('time')
+  
+  
 def compute_corr_matrix():
-    """
-    generates a heatmap of correlation (spearman) matrix between features used for machine learning and interpretable
-    features
-    :return: dataframe with correlation matrix
-    """
     left, right = ca.read_data('control')
     affected, unaffected = ca.read_data('patient')
-    df = pd.concat(
-        [get_features(right, 1), get_features(left, 1), get_features(unaffected, 1), get_features(affected, 1)])
-
-    rf_features = ['ax_mean', 'ax_var', 'ay_mean', 'ay_var', 'az_mean', 'az_var', 'a2_mean', 'a2_var', 'a2_max',
-                   'a2_min', 'entropy']
-    features = ['pitch', 'delta_yaw', 'counts', 'roll']
-
+    df = pd.concat([get_features(right, 1), get_features(left, 1), get_features(unaffected, 1), get_features(affected, 1)])
+    
+    rf_features = ['ax_mean', 'ax_var', 'ay_mean', 'ay_var', 'az_mean', 'az_var','a2_mean', 'a2_var', 'a2_max', 'a2_min',  'entropy']
+    features = ['pitch', 'delta_yaw', 'counts']#, 'roll']
+    
     temp = df
-    corr = np.vstack(([r for r, p in [spearmanr(temp['pitch'], temp[feat]) for feat in rf_features]],
-                      [r for r, p in [spearmanr(temp['delta_yaw'], temp[feat]) for feat in rf_features]],
-                      [r for r, p in [spearmanr(temp['counts'], temp[feat]) for feat in rf_features]],
-                      [r for r, p in [spearmanr(temp['roll'], temp[feat]) for feat in rf_features]]))
+    corr = np.vstack(([r for r,p in [spearmanr(temp['pitch'], temp[feat]) for feat in rf_features]], 
+                      [r for r,p in [spearmanr(temp['delta_yaw'], temp[feat]) for feat in rf_features]],
+                      [r for r,p in [spearmanr(temp['counts'], temp[feat]) for feat in rf_features]],
+                    #   [r for r,p in [spearmanr(temp['roll'], temp[feat]) for feat in rf_features]]
+                      ))
     corr = pd.DataFrame(corr, columns=rf_features)
     corr['feature'] = features
-    xnames = [r'$\overline{a_x}$', r'$\sigma^2(a_x)$', r'$\overline{a_y}$', r'$\sigma^2(a_y)$', r'$\overline{a_z}$',
-              r'$\sigma^2(a_z)$', r'$\overline{||a||_2}$', r'$\sigma^2(||a||_2)$', r'$max(||a||_2)$', r'$min(||a||_2)$',
-              r'$entropy(||a||_2)$']
-    ynames = [r'$pitch$', r'$\Delta yaw$', r'$counts$', r'$roll$']
-
-    plt.figure(figsize=(25, 3))
-    g = sns.heatmap(data=(corr.set_index('feature')), cmap='PiYG', annot=True, annot_kws={'fontsize': 15},
-                    xticklabels=xnames, yticklabels=ynames, cbar_kws={'pad': 0.005, 'aspect': 5})
+    xnames = [r'$\overline{a_x}$', r'$\sigma^2(a_x)$', r'$\overline{a_y}$', r'$\sigma^2(a_y)$', r'$\overline{a_z}$', r'$\sigma^2(a_z)$', r'$\overline{||a||_2}$', r'$\sigma^2(||a||_2)$', r'$max(||a||_2)$', r'$min(||a||_2)$', r'$entropy(||a||_2)$']
+    ynames = [r'$pitch$', r'$\Delta yaw$', r'$counts$']#, r'$roll$']
+    
+    plt.figure(figsize=(25, 2.5))
+    g = sns.heatmap(data=(corr.set_index('feature')), cmap='PiYG', annot=True, annot_kws={'fontsize':15}, 
+                xticklabels=xnames, yticklabels=ynames, cbar_kws={'pad':0.005, 'aspect':5})
     g.set_xticklabels(g.get_xmajorticklabels(), fontsize=18)
     g.set_yticklabels(g.get_ymajorticklabels(), fontsize=18)
     plt.yticks(rotation=0)
     plt.ylabel(None)
     return corr
-
-
+    
 def compute_gyro_features(data, freq):
-    """
-    computes features with gyroscope
-    :param data: dataframe with raw imu data
-    :param freq: sampling frequency of features
-    :return: dataframe with features
-    """
-    data.index = pd.to_datetime(data.index)
-    df = pd.DataFrame()
-    data_list = ca.get_continuous_segments(data)
-    data_list = [data.resample(str(round(1 / freq, 2)) + 'S', label='right', closed='right') for data in data_list]
-    blocks = [block for data in data_list for i, block in data if len(block) > 0]
+  data.index = pd.to_datetime(data.index)
+  df = pd.DataFrame()
+  data_list = ca.get_continuous_segments(data)
+  data_list = [data.resample(str(round(1/freq, 2))+'S', label='right', closed='right') for data in data_list]
+  blocks = [block for data in data_list for i,block in data if len(block)>0]
 
-    df['ax_mean'] = [block['ax'].mean() for block in blocks]
-    df['ax_var'] = [block['ax'].var() for block in blocks]
-    df['ay_mean'] = [block['ay'].mean() for block in blocks]
-    df['ay_var'] = [block['ay'].var() for block in blocks]
-    df['az_mean'] = [block['az'].mean() for block in blocks]
-    df['az_var'] = [block['az'].var() for block in blocks]
+  df['ax_mean'] = [block['ax'].mean() for block in blocks]
+  df['ax_var'] = [block['ax'].var() for block in blocks]
+  df['ay_mean'] = [block['ay'].mean() for block in blocks]
+  df['ay_var'] = [block['ay'].var() for block in blocks]
+  df['az_mean'] = [block['az'].mean() for block in blocks]
+  df['az_var'] = [block['az'].var() for block in blocks]
+  
+  df['gx_mean'] = [block['gx'].mean() for block in blocks]
+  df['gx_var'] = [block['gx'].var() for block in blocks]
+  df['gy_mean'] = [block['gy'].mean() for block in blocks]
+  df['gy_var'] = [block['gy'].var() for block in blocks]
+  df['gz_mean'] = [block['gz'].mean() for block in blocks]
+  df['gz_var'] = [block['gz'].var() for block in blocks]
+  
+  df['subject'] = [block['subject'][0] for block in blocks]
+  df['t_inst'] = [block['gnd'][-1] for block in blocks]
+  df['t_maj'] = [np.round(block['gnd'].mean()) for block in blocks]
+  df['t_mid'] = [block['gnd'][int(len(block)/2)] for block in blocks]
+  df['time'] = [block.index[-1] for block in blocks]
+  
+  df = df.set_index('time')
+  df.index = pd.to_datetime(df.index)
 
-    df['gx_mean'] = [block['gx'].mean() for block in blocks]
-    df['gx_var'] = [block['gx'].var() for block in blocks]
-    df['gy_mean'] = [block['gy'].mean() for block in blocks]
-    df['gy_var'] = [block['gy'].var() for block in blocks]
-    df['gz_mean'] = [block['gz'].mean() for block in blocks]
-    df['gz_var'] = [block['gz'].var() for block in blocks]
+  df = df.dropna(subset=['ax_var', 'ay_var', 'az_var'])
 
-    df['subject'] = [block['subject'][0] for block in blocks]
-    df['t_inst'] = [block['gnd'][-1] for block in blocks]
-    df['t_maj'] = [np.round(block['gnd'].mean()) for block in blocks]
-    df['t_mid'] = [block['gnd'][int(len(block) / 2)] for block in blocks]
-    df['time'] = [block.index[-1] for block in blocks]
-
-    df = df.set_index('time')
-    df.index = pd.to_datetime(df.index)
-
-    df = df.dropna(subset=['ax_var', 'ay_var', 'az_var'])
-
-    return df
-
-
+  return df
+  
 def generate_results_with_gyro():
-    """
-    trains and tests inter- and intra-subject random forests with and without gyroscope features; saves csv file with
-    performance parameters of the different classifiers
-    """
     lraw, rraw = ca.read_data('control')
     araw, uraw = ca.read_data('patient')
-
+    
     left = compute_gyro_features(lraw, 4)
     right = compute_gyro_features(rraw, 4)
     affected = compute_gyro_features(araw, 4)
     unaffected = compute_gyro_features(uraw, 4)
-    accl = ['ax_mean', 'ay_mean', 'az_mean', 'ax_var', 'ay_var', 'az_var']
-    with_gyro = accl + ['gx_mean', 'gy_mean', 'gz_mean', 'gx_var', 'gy_var', 'gz_var']
-
-    linter = ca.train_and_test_intersubject(left, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-    rinter = ca.train_and_test_intersubject(right, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-    uinter = ca.train_and_test_intersubject(affected, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-    ainter = ca.train_and_test_intersubject(unaffected, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-
-    lginter = ca.train_and_test_intersubject(left, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-    rginter = ca.train_and_test_intersubject(right, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-    uginter = ca.train_and_test_intersubject(affected, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-    aginter = ca.train_and_test_intersubject(unaffected, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-
-    lintra = ca.train_and_test_intrasubject(left, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-    rintra = ca.train_and_test_intrasubject(right, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-    uintra = ca.train_and_test_intrasubject(affected, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-    aintra = ca.train_and_test_intrasubject(unaffected, features=accl, target='t_mid',
-                                            classifier=RandomForestClassifier(class_weight='balanced'))
-
-    lgintra = ca.train_and_test_intrasubject(left, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-    rgintra = ca.train_and_test_intrasubject(right, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-    ugintra = ca.train_and_test_intrasubject(affected, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-    agintra = ca.train_and_test_intrasubject(unaffected, features=with_gyro, target='t_mid',
-                                             classifier=RandomForestClassifier(class_weight='balanced'))
-
-    methods_dict = {'rinter': rinter, 'linter': linter, 'uinter': uinter, 'ainter': ainter,
-                    'rginter': rginter, 'lginter': lginter, 'uginter': uginter, 'aginter': aginter,
-                    'rintra': rintra, 'lintra': lintra, 'uintra': uintra, 'aintra': aintra,
-                    'rgintra': rgintra, 'lgintra': lgintra, 'uginter': ugintra, 'agintra': agintra}
+    accl = ['ax_mean', 'ay_mean', 'az_mean', 'ax_var','ay_var', 'az_var']
+    with_gyro = accl + ['gx_mean', 'gy_mean', 'gz_mean', 'gx_var','gy_var', 'gz_var']
+    
+    linter = ca.train_and_test_intersubject(left, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    rinter = ca.train_and_test_intersubject(right, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    uinter = ca.train_and_test_intersubject(affected, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    ainter = ca.train_and_test_intersubject(unaffected, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    
+    lginter = ca.train_and_test_intersubject(left, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    rginter = ca.train_and_test_intersubject(right, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    uginter = ca.train_and_test_intersubject(affected, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    aginter = ca.train_and_test_intersubject(unaffected, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    
+    lintra = ca.train_and_test_intrasubject(left, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    rintra = ca.train_and_test_intrasubject(right, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    uintra = ca.train_and_test_intrasubject(affected, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    aintra = ca.train_and_test_intrasubject(unaffected, features=accl, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    
+    lgintra = ca.train_and_test_intrasubject(left, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    rgintra = ca.train_and_test_intrasubject(right, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    ugintra = ca.train_and_test_intrasubject(affected, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    agintra = ca.train_and_test_intrasubject(unaffected, features=with_gyro, target='t_mid', classifier=RandomForestClassifier(class_weight='balanced'))
+    
+    methods_dict = {'rinter':rinter, 'linter':linter, 'uinter':uinter, 'ainter':ainter,
+                    'rginter':rginter, 'lginter':lginter, 'uginter':uginter, 'aginter':aginter, 
+                    'rintra':rintra, 'lintra':lintra, 'uintra':uintra, 'aintra':aintra, 
+                    'rgintra':rgintra, 'lgintra':lgintra, 'uginter':ugintra, 'agintra':agintra}
     subresults = []
     for name, df in methods_dict.items():
         for sub, subdata in df.groupby('subject'):
