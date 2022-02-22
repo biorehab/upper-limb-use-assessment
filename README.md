@@ -40,21 +40,21 @@ Contains data from the affected arm of the patients.
 The columns in each of the four files are, 
 time, ax, ay, az, gx, gy, gz, pitch, yaw, mx, my, mz, subject, old_time, r1, r2, g1, g2, task, use_type, gnd
 
-# Subjects
+### Subjects
 
 There were 10 controls and 5 patients in the study. The subject column contains numbers unique to each subject.
 
-# Time 
+### Time 
 
 The column 'old_time' contains time on the watch while recording. Delay (~1s) between the video and the watches was corrected by observing the data and video simultaneously. Corrected time is included in the time column.
 
-# Sensor data
+### Sensor data
 
 Columns ax, ay, and az correspond to data from the 3 axes of the accelerometer, gx, gy, and gz correspond to data from the gyroscope and mx, my, and mz correspond to data from the magnetometer. The sensor data were recorded at 50 Hz.
 
 Yaw and pitch angles were calculated from the accelerometer and gyroscope data using the Madgwick algorithm.
 
-# Video annotations
+### Video annotations
 
 The experiment videos were annotated using the FAABOS scale by 2 therapists twice with a week between each annotation. Columns r1 and r2 correspond to  first and second annotations made by one therapist, and g1 and g2 correspond to those by the other therapist. The gnd column corresponds to final ground truth used for analysis. It was obtained by taking the majority of r1, r2, g1, and g2, a label was chosen randomly in the event of a tie. Video annotations were saved at 30 Hz and are up-sampled here to match the sensor data frequency.
 
