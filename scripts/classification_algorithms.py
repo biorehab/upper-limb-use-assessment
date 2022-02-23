@@ -653,7 +653,7 @@ def get_outputs(subject_type, names=[]):
 
 
 def plot_comparison_roc():
-    plt.figure(figsize=(13, 3))
+    plt.figure(figsize=(15, 3))
     left, right = read_data('control')
     affected, unaffected = read_data('patient')
     datasets = [[right, left], [unaffected, affected]]
