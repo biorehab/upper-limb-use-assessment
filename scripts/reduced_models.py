@@ -143,16 +143,16 @@ def plot_reduced_model_results():
 
     result = pd.concat([cont_intra, pat_intra, cont_inter, pat_inter])
     result.to_csv('results/reduced_models.csv')
-    fig, ax = plt.subplots(figsize=(10, 3))
+    fig, ax = plt.subplots(figsize=(12, 3))
     sns.boxplot(data=result, x='type', y='youden', hue='method', notch=True, ax=ax)
     ax.set_xlim(0-0.5, 3+0.5)
     plt.xlabel(None)
-    plt.xticks(fontsize=12)
-    plt.ylabel('Youden Index', fontsize=12)
+    plt.xticks(fontsize=14)
+    plt.ylabel('Youden Index', fontsize=14)
     plt.yticks(fontsize=8)
     plt.tight_layout()
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles=handles[:], labels=labels[:], fontsize=12, bbox_to_anchor=(1.01, 1), ncol=1)
+    ax.legend(handles=handles[:], labels=labels[:], fontsize=14, bbox_to_anchor=(1.01, 1), ncol=1)
     
 def get_features(data, freq):
   acc_vectors = np.array([data['ax'], data['ay'], data['az']], np.int32)
@@ -220,11 +220,14 @@ def compute_corr_matrix():
     xnames = [r'$\overline{a_x}$', r'$\sigma^2(a_x)$', r'$\overline{a_y}$', r'$\sigma^2(a_y)$', r'$\overline{a_z}$', r'$\sigma^2(a_z)$', r'$\overline{||a||_2}$', r'$\sigma^2(||a||_2)$', r'$max(||a||_2)$', r'$min(||a||_2)$', r'$entropy(||a||_2)$']
     ynames = [r'$pitch$', r'$\Delta yaw$', r'$counts$']#, r'$roll$']
     
-    plt.figure(figsize=(25, 2.5))
-    g = sns.heatmap(data=(corr.set_index('feature')), cmap='PiYG', annot=True, annot_kws={'fontsize':15}, 
-                xticklabels=xnames, yticklabels=ynames, cbar_kws={'pad':0.005, 'aspect':5})
-    g.set_xticklabels(g.get_xmajorticklabels(), fontsize=18)
-    g.set_yticklabels(g.get_ymajorticklabels(), fontsize=18)
+    plt.figure(figsize=(20, 2))
+    cmap = sns.diverging_palette(10, 250, as_cmap=True)
+    g = sns.heatmap(data=(corr.set_index('feature')), cmap=cmap, annot=True, fmt='.2f', annot_kws={'fontsize':15, 'color':'k'}, 
+                xticklabels=xnames, yticklabels=ynames, cbar_kws={'pad':0.005, 'aspect':5, 'ticks':[-0.4,0,0.5,0.9]})
+    cbar = g.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=10)
+    g.set_xticklabels(g.get_xmajorticklabels(), fontsize=14)
+    g.set_yticklabels(g.get_ymajorticklabels(), fontsize=14)
     plt.yticks(rotation=0)
     plt.ylabel(None)
     return corr

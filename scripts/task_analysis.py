@@ -7,22 +7,13 @@ import matplotlib.pyplot as plt
 
 
 def train_validate_and_test_intersubject(df, remove_tasks=[], remove_from='both'):
-    """
-    trains, validates and tests inter-subject classifiers with and without certain tasks in the training and testing
-    datasets
-    :param df: dataframe with raw imu data
-    :param remove_tasks: list of tasks to be removed
-    :param remove_from: 'train', 'test' or 'both' - which dataset the task has to to be removed from
-    :return: dataframe with classifier output
-    """
     features = ['ax_mean', 'ax_var', 'ay_mean', 'ay_var', 'az_mean', 'az_var',
                 'a2_mean', 'a2_var', 'a2_min', 'a2_max', 'entropy']
     target = ['t_mid']
     classifier = RandomForestClassifier(class_weight='balanced')
     param_grid = {'n_estimators': [100, 200, 500, 1000, 1200, 1500]}
     new_subs = []
-    sublist = [(sub, subdata[~(subdata.task.isin(remove_tasks))]) for sub, subdata in df.groupby('subject') if
-               subdata.task.isin(remove_tasks).any()] \
+    sublist = [(sub, subdata[~(subdata.task.isin(remove_tasks))]) for sub, subdata in df.groupby('subject') if subdata.task.isin(remove_tasks).any()] \
         if (remove_from == 'test' or remove_from == 'both') else df.groupby('subject')
 
     for sub, subdata in sublist:
@@ -55,14 +46,6 @@ def train_validate_and_test_intersubject(df, remove_tasks=[], remove_from='both'
 
 
 def train_validate_test_intra_task_combinations(df, remove_tasks=[]):
-    """
-    trains, validates and tests random forests with and without certain tasks - 1. train and test with task, 2. test
-    without task, 3. train without task, 4. train and test without task; all combinations are with the same splits;
-    interates 10 times
-    :param df: dataframe with raw imu data
-    :param remove_tasks: list of tasks to be removed
-    :return: dataframes with classifier (1, 2, 3, 4) outputs
-    """
     classifier = RandomForestClassifier(class_weight='balanced')
     param_grid = {'n_estimators': [100, 200, 500, 1000, 1200, 1500]}
 
@@ -145,11 +128,6 @@ def train_validate_test_intra_task_combinations(df, remove_tasks=[]):
 
 
 def generate_intrasubject_output(hand='right', task='walk'):
-    """
-    generates and saves intra-subject classifier outputs; unlabelled tasks are removed
-    :param hand: 'right', 'left', 'affected', or 'unaffected'
-    :param task: task to be removed - 'walk' (Walk25, OpenDoor and OnSwitch are removed), 'drinkcup' or 'openbottle'
-    """
     if hand == 'right':
         subject_type = 'control'
         _, data = ca.read_data(subject_type)
@@ -190,11 +168,6 @@ def generate_intrasubject_output(hand='right', task='walk'):
 
 
 def generate_intersubject_output(hand='right', task='walk'):
-    """
-    generates and saves inter-subject classifier outputs; unlabelled tasks are removed
-    :param hand: 'right', 'left', 'affected', or 'unaffected'
-    :param task: task to be removed - 'walk' (Walk25, OpenDoor and OnSwitch are removed), 'drinkcup' or 'openbottle'
-    """
     if hand == 'right':
         subject_type = 'control'
         _, data = ca.read_data(subject_type)
@@ -224,12 +197,9 @@ def generate_intersubject_output(hand='right', task='walk'):
 
     rfl1 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from=None).rename(
         columns={'pred': tgt})[[tgt]]
-    rfl2 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from='test').rename(
-        columns={'pred': tgt})[[tgt]]
-    rfl3 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from='train').rename(
-        columns={'pred': tgt})[[tgt]]
-    rfl4 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from='both').rename(
-        columns={'pred': tgt})[[tgt]]
+    rfl2 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from='test').rename(columns={'pred': tgt})[[tgt]]
+    rfl3 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from='train').rename(columns={'pred': tgt})[[tgt]]
+    rfl4 = train_validate_and_test_intersubject(feat, remove_tasks=remove_tasks, remove_from='both').rename(columns={'pred': tgt})[[tgt]]
 
     rfl1.to_csv(subject_type + f'/classifier outputs/rf{tgt}_inter_{task}.csv')
     rfl2.to_csv(subject_type + f'/classifier outputs/rf{tgt}_inter_test_without_{task}.csv')
@@ -238,17 +208,9 @@ def generate_intersubject_output(hand='right', task='walk'):
 
 
 def plot_results_for_task(task, subject_type, inter=True, subject=None):
-    """
-    plots sensitivity and specificity for the different combinations of presence/absence of the task
-    :param task: removed task: 'walk', 'drinkcup', or 'openbottle'
-    :param subject_type: 'control' or 'patient'
-    :param inter: bool, inter-subject (True) or intra-subject (False)
-    :param subject: individual subject number (optional)
-    :return: dataframes with performance parameters for both arms
-    """
     if inter:
         files = ['rfl_inter_' + task + '.csv', 'rfl_inter_train_without_' + task + '.csv',
-                 'rfl_inter_test_without_' + task + '.csv', 'rfl_inter_no_' + task + '.csv',
+                 'rfl_inter_test_without_' + task + '.csv', 'rfl_inter_no_' + task + '.csv', 
                  'rfr_inter_' + task + '.csv', 'rfr_inter_train_without_' + task + '.csv',
                  'rfr_inter_test_without_' + task + '.csv', 'rfr_inter_no_' + task + '.csv']
         methods_dict = ca.get_outputs(subject_type, names=files)
@@ -267,7 +229,7 @@ def plot_results_for_task(task, subject_type, inter=True, subject=None):
 
     else:
         files = ['rfl_intra_' + task + '.csv', 'rfl_intra_train_without_' + task + '.csv',
-                 'rfl_intra_test_without_' + task + '.csv', 'rfl_intra_no_' + task + '.csv',
+                 'rfl_intra_test_without_' + task + '.csv', 'rfl_intra_no_' + task + '.csv', 
                  'rfr_intra_' + task + '.csv', 'rfr_intra_train_without_' + task + '.csv',
                  'rfr_intra_test_without_' + task + '.csv', 'rfr_intra_no_' + task + '.csv']
 
@@ -292,10 +254,10 @@ def plot_results_for_task(task, subject_type, inter=True, subject=None):
     df = df.fillna(0)
     ax = plt.subplot(121)
     title = 'left' if subject_type == 'control' else 'affected'
-    plt.title(title, fontsize=12)
+    plt.title(title, fontsize=15)
 
     df['group'] = [r'$\bar{t_r}\bar{t_e}$' if x.find('no') != -1 else r'$t_r\bar{t_e}$' if x.find(
-        'test') != -1 else r'$\bar{t_r}t_e$' if x.find('train') != -1 else r'$t_rt_e$' for x in df.method]
+        'test') != -1 else r'$\overline{t_r}t_e$' if x.find('train') != -1 else r'$t_rt_e$' for x in df.method]
 
     sns.pointplot(data=df, x='group', y='sensitivity', join=False, ci='sd', capsize=0.1)
     sns.pointplot(data=df, x='group', y='specificity', join=False, color='tab:red', ci='sd', capsize=0.1)
@@ -303,14 +265,14 @@ def plot_results_for_task(task, subject_type, inter=True, subject=None):
 
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
-    plt.yticks(fontsize=12)
-    plt.xticks(fontsize=15)
+    plt.yticks(fontsize=14)
+    plt.xticks(fontsize=19)
     plt.xlabel(None)
     plt.ylabel(None)
 
     ax = plt.subplot(122)
     title = 'right' if subject_type == 'control' else 'unaffected'
-    plt.title(title, fontsize=12)
+    plt.title(title, fontsize=15)
     df = dfs[1] if not subject else dfs[1].loc[dfs[1].subject == subject].copy()
     df = df.fillna(0)
 
@@ -326,26 +288,22 @@ def plot_results_for_task(task, subject_type, inter=True, subject=None):
     handles = [f("o", colors[i]) for i in range(2)]
 
     ax.set_facecolor('gainsboro')
+    ax.set_alpha(0.7)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.spines['left'].set_visible(False)
     plt.yticks([])
-    plt.xticks(fontsize=15)
+    plt.xticks(fontsize=19)
 
     plt.xlabel(None)
     plt.ylabel(None)
 
-    plt.legend(handles, labels, bbox_to_anchor=(1, -0.1), loc='upper right', fontsize=12, ncol=2)
+    plt.legend(handles, labels, bbox_to_anchor=(1, -0.1), loc='upper right', fontsize=17, ncol=2)
     cv = 'inter' if inter else 'intra'
-    plt.suptitle('-'.join([subject_type, task, cv]), fontsize=15)
+    plt.suptitle('-'.join([subject_type, task, cv]), fontsize=18)
     return dfs
-
-
+    
 def plot_proportion_vs_performance():
-    """
-    plots proportion of functional use against sensitivity and specificity of intra-subject reduced models of affected
-    arm data
-    """
     plt.figure(figsize=(7, 10))
     aff, _ = ca.read_data('patient')
     files = ['rf_intra.csv', 'rf_intra_ax.csv', 'rf_intra_mean.csv', 'rf_intra_var.csv']
@@ -358,16 +316,16 @@ def plot_proportion_vs_performance():
                 subresults += [ca.confmatrix(itdf['l'], itdf['gnd']).assign(subject=sub, method=name, iteration=i)]
     intra_aff = pd.concat(subresults)
     df = intra_aff.groupby(['method', 'subject']).mean()
-    df['percentage of functional use'] = df['true positive'] + df['false negative']
+    df['percentage of functional use'] = df['true positive']+df['false negative']
     plt.subplot(211)
     sns.scatterplot(data=df, x='percentage of functional use', y='sensitivity', hue='method', s=70)
     sns.regplot(data=df, x='percentage of functional use', y='sensitivity', color='k', scatter=False)
-    plt.legend([], [], frameon=False)
+    plt.legend([],[], frameon=False)
     plt.xlabel('Percentage of Functional Use', fontsize=18)
     plt.ylabel('Sensitivity', fontsize=18)
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
-
+    
     plt.subplot(212)
     sns.scatterplot(data=df, x='percentage of functional use', y='specificity', hue='method', legend=False, s=70)
     sns.regplot(data=df, x='percentage of functional use', y='specificity', color='k', scatter=False)
@@ -375,10 +333,11 @@ def plot_proportion_vs_performance():
     plt.ylabel('Specificity', fontsize=18)
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
-
-    f = lambda m, c: plt.plot([], [], marker=m, color=c, ls="none", linewidth=10)[0]
+    
+    f = lambda m,c: plt.plot([],[],marker=m, color=c, ls="none", linewidth=10)[0]
     colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:red']
-    labels = ['full', 'mean of ax', 'mean of ax, ay, az', 'mean and variance of ax, ay, az']
+    labels = ['full', 'mean of ax', 'all mean', 'all mean and variance']
     handles = [f("o", colors[i]) for i in range(len(labels))]
+    
+    plt.legend(handles, labels, bbox_to_anchor=(1.1,-0.45), loc='lower right', fontsize=18, ncol=2)
 
-    plt.legend(handles, labels, bbox_to_anchor=(1.1, -0.45), loc='lower right', fontsize=15, ncol=2)

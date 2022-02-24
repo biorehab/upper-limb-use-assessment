@@ -661,9 +661,9 @@ def plot_comparison_roc():
              'svm_inter.csv', 'mlp_intra.csv', 'mlp_inter.csv']
     labels = ['Activity Counts', 'Vector Magnitude', 'GM Score', 'GMAC', 'RF intra', 'RF inter', 'SVM intra',
               'SVM inter', 'MLP intra', 'MLP inter']
-    markers = ['o', 'o', 'o', 'o', 'X', '^', 'X', '^', 'X', '^']
-    colors = ['tab:blue', 'tab:orange', 'tab:green', 'tab:pink', 'tab:red', 'tab:red', 'tab:purple', 'tab:purple',
-              'tab:brown', 'tab:brown']
+    markers = ['o', 'X', '^', 's', '*', '*', 'P', 'P', 'D', 'D']
+    colors = ['tab:blue', 'tab:blue', 'tab:blue', 'tab:blue', 'tab:green', 'tab:orange', 'tab:green', 'tab:orange',
+              'tab:green', 'tab:orange']
 
     for datas, typ, fignum in zip(datasets, ['control', 'patient'], [1, 3]):
         # generate results
@@ -751,7 +751,15 @@ def plot_youden_boxplot():
               'GMAC': 'tab:pink', 'RF intra': 'tab:red', 'RF inter': 'firebrick', 'SVM intra': 'tab:purple',
               'SVM inter': 'mediumpurple', 'MLP intra': 'tab:brown', 'MLP inter': 'sienna'}
     xlabels_new = [label.replace(' ', ' \n') for label in order]
-    ax = sns.boxplot(data=df, x='method', y='youden', order=order, width=0.7, palette=colors, notch=True)
+    plt.axvspan(-0.5, 3.5, facecolor='tab:blue', alpha=0.1, zorder=-1)
+    plt.axvspan(3.5, 6.5, facecolor='tab:orange', alpha=0.1, zorder=-1)
+    plt.axvspan(6.5, 9.5, facecolor='tab:green', alpha=0.1, zorder=-1)
+    ax = sns.boxplot(data=df, x='method', y='youden', order=order, width=0.7, color='white', notch=True, 
+                      medianprops=dict(color='k'), flierprops=dict(markeredgecolor='k'), capprops=dict(color='k'),
+                      whiskerprops=dict(color='k'), boxprops=dict(edgecolor='k'))
+    plt.text(1, 1.1, 'traditional', fontsize=12)
+    plt.text(4.8, 1.1, 'inter', fontsize=12)
+    plt.text(7.8, 1.1, 'intra', fontsize=12)
     ax.set_xlabel(None)
     ax.set_ylabel('Youden Index', fontsize=12)
     ax.set_xticklabels(xlabels_new, fontsize=12)
