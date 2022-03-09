@@ -64,3 +64,5 @@ The task column contains strings corresponding to what task was performed at tha
 
 David, A., ReethaJanetSureka, S., Gayathri, S., Annamalai, S. J., Samuelkamleshkumar, S., Kuruvilla, A., Magimairaj, H. P., Varadhan, S., & Balasubramanian, S. (2021). [**Quantification of the relative arm use in patients with hemiparesis using inertial measurement units**](https://journals.sagepub.com/doi/full/10.1177/20556683211019694). Journal of Rehabilitation and Assistive Technologies Engineering.
 
+Subash, T., David, A., ReetaJanetSurekha, S., Gayathri, S., Samuelkamaleshkumar, S., Magimairaj, H. P., ... & Balasubramanian, S. (2022). [**Comparing algorithms for assessing upper limb use with inertial measurement units**](https://www.biorxiv.org/content/10.1101/2022.02.24.481756v1.full). bioRxiv.
+
